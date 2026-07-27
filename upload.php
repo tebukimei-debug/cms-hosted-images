@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
 
 header('Content-Type: application/json');
 
@@ -99,8 +100,10 @@ try {
     }
 
     $pdo = getDbConnection();
-    $stmt = $pdo->prepare("INSERT INTO images (unique_id, filename, url, thumb_url, size, mime_type) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$uniqueId, $filename, $url, $thumbUrl, $file['size'], $file['type']]);
+    $userId = getActiveUserId(); // null if not logged in
+    
+    $stmt = $pdo->prepare("INSERT INTO images (unique_id, filename, url, thumb_url, size, mime_type, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$uniqueId, $filename, $url, $thumbUrl, $file['size'], $file['type'], $userId]);
 
     echo json_encode([
         'success' => true,
