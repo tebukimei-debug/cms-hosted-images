@@ -30,6 +30,16 @@ function getDbConnection() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS albums (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            unique_id VARCHAR(21) UNIQUE NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            privacy VARCHAR(20) DEFAULT 'public',
+            password_hash VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS images (
             id SERIAL PRIMARY KEY,
             unique_id VARCHAR(21) UNIQUE NOT NULL,
@@ -39,12 +49,16 @@ function getDbConnection() {
             size INTEGER NOT NULL,
             mime_type VARCHAR(50) NOT NULL,
             user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            album_id INTEGER REFERENCES albums(id) ON DELETE SET NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Upgrade path for existing tables (if user_id column is missing)
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL");
+        } catch (PDOException $e) {}
+
+        try {
+            $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS album_id INTEGER REFERENCES albums(id) ON DELETE SET NULL");
         } catch (PDOException $e) {}
 
         return $pdo;

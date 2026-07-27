@@ -5,6 +5,13 @@ require_once __DIR__ . '/auth.php';
 $pdo = getDbConnection();
 $stmt = $pdo->query("SELECT * FROM images ORDER BY created_at DESC LIMIT 20");
 $images = $stmt->fetchAll();
+
+$albums = [];
+if (isLoggedIn()) {
+    $stmt = $pdo->prepare("SELECT id, name FROM albums WHERE user_id = ? ORDER BY name ASC");
+    $stmt->execute([getActiveUserId()]);
+    $albums = $stmt->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -22,6 +29,7 @@ $images = $stmt->fetchAll();
     <!-- Navbar -->
     <div class="max-w-4xl mx-auto flex justify-end mb-4">
         <?php if (isLoggedIn()): ?>
+            <a href="/albums.php" class="text-blue-400 mr-6 self-center hover:underline">Mis Álbumes</a>
             <span class="mr-4 text-gray-300 self-center">Hola, <b class="text-white"><?= htmlspecialchars(getActiveUsername()) ?></b></span>
             <a href="/logout.php" class="bg-red-500/20 text-red-400 border border-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition">Cerrar Sesión</a>
         <?php else: ?>
@@ -36,9 +44,24 @@ $images = $stmt->fetchAll();
         </h1>
 
         <!-- Uploader -->
+        <div class="mb-6 flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div>
+                <label class="text-gray-400 mr-2 text-sm">Subir a:</label>
+                <select id="albumSelect" class="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-white text-sm outline-none">
+                    <option value="">(Sin Álbum / General)</option>
+                    <?php foreach ($albums as $album): ?>
+                        <option value="<?= $album['id'] ?>"><?= htmlspecialchars($album['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php if (!isLoggedIn()): ?>
+                <span class="text-xs text-yellow-500">Inicia sesión para crear álbumes.</span>
+            <?php endif; ?>
+        </div>
+
         <div id="dropzone" class="border-2 border-dashed border-gray-600 rounded-xl p-12 text-center bg-gray-800/50 hover:bg-gray-800 transition cursor-pointer mb-12">
-            <p class="text-xl text-gray-300">Arrastra una imagen aquí o haz clic para subir</p>
-            <input type="file" id="fileInput" class="hidden" accept="image/*">
+            <p class="text-xl text-gray-300">Arrastra imágenes aquí o haz clic para subir varias</p>
+            <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
         </div>
 
         <div id="progress" class="hidden mb-8 text-center text-blue-400">Procesando y optimizando...</div>
@@ -74,20 +97,28 @@ $images = $stmt->fetchAll();
             e.preventDefault();
             dropzone.classList.remove('border-blue-500');
             if (e.dataTransfer.files.length) {
-                uploadFile(e.dataTransfer.files[0]);
+                uploadFiles(e.dataTransfer.files);
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length) {
-                uploadFile(e.target.files[0]);
+                uploadFiles(e.target.files);
             }
         });
 
-        async function uploadFile(file) {
+        async function uploadFiles(files) {
             progress.classList.remove('hidden');
             const formData = new FormData();
-            formData.append('file', file);
+            
+            for (let i = 0; i < files.length; i++) {
+                formData.append('file[]', files[i]);
+            }
+            
+            const albumId = document.getElementById('albumSelect')?.value;
+            if (albumId) {
+                formData.append('album_id', albumId);
+            }
 
             try {
                 const res = await fetch('/upload.php', {
@@ -99,12 +130,15 @@ $images = $stmt->fetchAll();
                 try {
                     const data = JSON.parse(text);
                     if (data.success) {
+                        let errors = data.results.filter(r => r.error);
+                        if (errors.length > 0) {
+                            alert("Algunas imágenes fallaron:\n" + errors.map(e => e.name + ': ' + e.error).join('\n'));
+                        }
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
                     }
                 } catch (e) {
-                    // Si PHP lanza un Fatal Error, no será JSON
                     console.error("Respuesta cruda del servidor:", text);
                     alert('Error en el servidor. Revisa la consola o asegúrate de que la imagen no sea demasiado grande.');
                 }
