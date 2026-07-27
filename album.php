@@ -87,10 +87,10 @@ if ($authOk) {
                 </form>
             </div>
         <?php else: ?>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
                 <?php foreach ($images as $img): ?>
                     <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
-                        <a href="<?= htmlspecialchars($img['url']) ?>" target="_blank" class="block">
+                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block">
                             <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
                         </a>
                         

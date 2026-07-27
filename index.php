@@ -75,7 +75,7 @@ if (isLoggedIn()) {
         <div id="uploadResults" class="hidden mb-12 bg-slate-800 border border-slate-700 p-6 rounded-xl">
             <h2 class="text-2xl font-bold mb-6 text-center text-green-400">¡Subida Exitosa!</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div>
                     <label class="block text-gray-300 font-semibold mb-2">Forum links (Todos)</label>
                     <textarea id="allForumLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
@@ -83,6 +83,10 @@ if (isLoggedIn()) {
                 <div>
                     <label class="block text-gray-300 font-semibold mb-2">HTML links (Todos)</label>
                     <textarea id="allHtmlLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-300 font-semibold mb-2">HTML code grid (Forzado)</label>
+                    <textarea id="allHtmlGridLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
                 </div>
             </div>
 
@@ -99,7 +103,7 @@ if (isLoggedIn()) {
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
                 <?php foreach ($images as $img): ?>
                     <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
-                        <a href="<?= htmlspecialchars($img['url']) ?>" target="_blank" class="block">
+                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block">
                             <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
                         </a>
                         
@@ -158,50 +162,68 @@ if (isLoggedIn()) {
 
         async function uploadFiles(files) {
             progress.classList.remove('hidden');
-            const formData = new FormData();
-            
-            for (let i = 0; i < files.length; i++) {
-                formData.append('file[]', files[i]);
-            }
+            progress.innerText = 'Procesando y optimizando... (0/' + files.length + ')';
             
             const albumId = document.getElementById('albumSelect')?.value;
-            if (albumId) {
-                formData.append('album_id', albumId);
-            }
+            let allResults = [];
+            let hasError = false;
 
-            try {
-                const res = await fetch('/upload.php', {
-                    method: 'POST',
-                    body: formData
-                });
+            // Procesar en lotes de 20
+            const batchSize = 20;
+            const totalFiles = files.length;
+            
+            for (let i = 0; i < totalFiles; i += batchSize) {
+                const chunk = Array.from(files).slice(i, i + batchSize);
+                const formData = new FormData();
                 
-                const text = await res.text();
-                try {
-                    const data = JSON.parse(text);
-                    if (data.success) {
-                        const successfulUploads = data.results.filter(r => r.success);
-                        let errors = data.results.filter(r => r.error);
-                        
-                        if (errors.length > 0) {
-                            alert("Algunas imágenes fallaron:\n" + errors.map(e => e.name + ': ' + e.error).join('\n'));
-                        }
-                        
-                        if (successfulUploads.length > 0) {
-                            showResults(successfulUploads);
-                        } else {
-                            location.reload();
-                        }
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                } catch (e) {
-                    console.error("Respuesta cruda del servidor:", text);
-                    alert('Error en el servidor. Revisa la consola o asegúrate de que la imagen no sea demasiado grande.');
+                for (let j = 0; j < chunk.length; j++) {
+                    formData.append('file[]', chunk[j]);
                 }
-            } catch (err) {
-                alert('Error de red al intentar conectar con el servidor.');
-            } finally {
-                progress.classList.add('hidden');
+                
+                if (albumId) {
+                    formData.append('album_id', albumId);
+                }
+
+                try {
+                    const response = await fetch('/upload.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const text = await response.text();
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.success && data.results) {
+                            allResults = allResults.concat(data.results.filter(r => r.success));
+                            const errors = data.results.filter(r => r.error);
+                            if (errors.length > 0) {
+                                alert("Algunas imágenes fallaron:\n" + errors.map(e => e.name + ': ' + e.error).join('\n'));
+                                hasError = true;
+                            }
+                        } else {
+                            alert('Error en un lote: ' + (data.error || 'Desconocido'));
+                            hasError = true;
+                        }
+                    } catch (e) {
+                        console.error("Respuesta cruda del servidor:", text);
+                        alert('Error en el servidor. Revisa la consola o asegúrate de que la imagen no sea demasiado grande.');
+                        hasError = true;
+                    }
+                } catch (err) {
+                    alert('Error de red al intentar conectar con el servidor en un lote.');
+                    hasError = true;
+                }
+                
+                const currentProgress = Math.min(i + batchSize, totalFiles);
+                progress.innerText = 'Procesando y optimizando... (' + currentProgress + '/' + totalFiles + ')';
+            }
+            
+            progress.classList.add('hidden');
+
+            if (allResults.length > 0) {
+                showResults(allResults);
+            } else if (!hasError) {
+                alert('No se subió ninguna imagen.');
             }
         }
 
@@ -213,23 +235,29 @@ if (isLoggedIn()) {
             const origin = window.location.origin;
             let forumAll = [];
             let htmlAll = [];
+            let htmlGridAll = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(24%, 1fr)); gap: 10px;">\n';
+            
             individualResults.innerHTML = '';
 
             uploads.forEach(u => {
-                const fullUrl = origin + u.url;
-                const thumbUrl = origin + u.thumb_url;
+                const fullUrl = origin + u.url; // Archivo original
+                const thumbUrl = origin + u.thumb_url; // Miniatura
+                const viewUrl = origin + '/view.php?id=' + u.id; // Página del visor
                 
-                const forumCode = `[url=${fullUrl}][img]${thumbUrl}[/img][/url]`;
-                const htmlCode = `<a href="${fullUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
+                // Los códigos usan la URL de visualización en lugar de la foto directa
+                const forumCode = `[url=${viewUrl}][img]${thumbUrl}[/img][/url]`;
+                const htmlCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
+                const gridCode = `    <a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" style="width: 100%; object-fit: cover;" border="0"></a>`;
                 
                 forumAll.push(forumCode);
                 htmlAll.push(htmlCode);
+                htmlGridAll += gridCode + '\n';
 
                 const indDiv = document.createElement('div');
                 indDiv.className = "flex flex-col md:flex-row items-center bg-slate-900 p-4 rounded-lg border border-slate-700 gap-6";
                 indDiv.innerHTML = `
                     <div class="flex-shrink-0">
-                        <a href="${fullUrl}" target="_blank">
+                        <a href="${viewUrl}" target="_blank">
                             <img src="${thumbUrl}" class="max-w-[150px] max-h-[150px] object-cover rounded shadow">
                         </a>
                         <p class="text-xs text-gray-400 mt-2 text-center break-all w-[150px]">${u.name}</p>
@@ -237,7 +265,7 @@ if (isLoggedIn()) {
                     <div class="flex-grow w-full space-y-3">
                         <div>
                             <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Show to friend:</label>
-                            <input type="text" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-gray-200" value="${fullUrl}" readonly onclick="this.select()">
+                            <input type="text" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-gray-200" value="${viewUrl}" readonly onclick="this.select()">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Forum thumbnail:</label>
@@ -252,8 +280,11 @@ if (isLoggedIn()) {
                 individualResults.appendChild(indDiv);
             });
 
+            htmlGridAll += '</div>';
+
             allForumLinks.value = forumAll.join('\n');
             allHtmlLinks.value = htmlAll.join('\n');
+            document.getElementById('allHtmlGridLinks').value = htmlGridAll;
         }
 
         async function renameImage(id, currentTitle) {
