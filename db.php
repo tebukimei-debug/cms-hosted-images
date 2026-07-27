@@ -54,6 +54,10 @@ function getDbConnection() {
         )");
 
         try {
+            $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS thumb_url TEXT");
+        } catch (PDOException $e) {}
+
+        try {
             $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL");
         } catch (PDOException $e) {}
 
