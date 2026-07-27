@@ -1,0 +1,35 @@
+FROM node:20-alpine AS base
+
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+RUN corepack enable pnpm
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/db/package.json ./packages/db/
+
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+WORKDIR /app
+RUN corepack enable pnpm
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
+COPY . .
+
+RUN pnpm --filter @chevereto/db generate
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/worker ./apps/worker
+
+WORKDIR /app/apps/worker
+
+CMD ["npm", "start"]
