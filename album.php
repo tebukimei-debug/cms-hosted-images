@@ -48,6 +48,24 @@ if ($authOk) {
     $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id = ? ORDER BY created_at DESC");
     $stmt->execute([$album['id']]);
     $images = $stmt->fetchAll();
+
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+    $domain = $protocol . '://' . $_SERVER['HTTP_HOST'];
+
+    $albumForumCode = '';
+    $albumHtmlCode = '';
+    $albumGridCode = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(24%, 1fr)); gap: 10px;">' . "\n";
+
+    foreach ($images as $img) {
+        $thumbUrl = $domain . ($img['thumb_url'] ?? $img['url']);
+        $viewUrl = $domain . '/view.php?id=' . $img['unique_id'];
+        $name = htmlspecialchars($img['title'] ?: $img['filename'], ENT_QUOTES);
+
+        $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url]\n";
+        $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>\n";
+        $albumGridCode .= "    <a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>\n";
+    }
+    $albumGridCode .= '</div>';
 }
 ?>
 <!DOCTYPE html>
@@ -67,13 +85,47 @@ if ($authOk) {
     </div>
 
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold mb-2"><?= htmlspecialchars($album['name']) ?></h1>
-        <p class="text-gray-400 mb-8">
-            Privacidad: 
-            <strong class="text-white uppercase text-xs tracking-wider">
-                <?= $album['privacy'] ?>
-            </strong>
-        </p>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-4xl font-bold mb-2"><?= htmlspecialchars($album['name']) ?></h1>
+                <p class="text-gray-400">
+                    Privacidad: 
+                    <strong class="text-white uppercase text-xs tracking-wider">
+                        <?= $album['privacy'] ?>
+                    </strong>
+                </p>
+            </div>
+            <?php if ($authOk && count($images) > 0): ?>
+                <button onclick="document.getElementById('albumCodes').classList.toggle('hidden')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                    </svg>
+                    Compartir Álbum
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($authOk && count($images) > 0): ?>
+            <!-- Panel de Códigos del Álbum -->
+            <div id="albumCodes" class="hidden mb-12 bg-slate-800 border border-slate-700 p-6 rounded-xl">
+                <h2 class="text-xl font-bold mb-4 text-indigo-400">Códigos para compartir todas las imágenes</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-300 font-semibold mb-2 text-sm">Forum links (BBCode)</label>
+                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumForumCode)) ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 font-semibold mb-2 text-sm">HTML links</label>
+                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumHtmlCode)) ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 font-semibold mb-2 text-sm">HTML code grid (4 Columnas)</label>
+                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumGridCode)) ?></textarea>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if (!$authOk): ?>
             <div class="bg-slate-800 p-8 rounded-xl max-w-md mx-auto text-center border border-slate-700">
