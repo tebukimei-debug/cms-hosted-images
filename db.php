@@ -65,6 +65,10 @@ function getDbConnection() {
             $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS album_id INTEGER REFERENCES albums(id) ON DELETE SET NULL");
         } catch (PDOException $e) {}
 
+        try {
+            $pdo->exec("ALTER TABLE images ADD COLUMN IF NOT EXISTS title VARCHAR(255)");
+        } catch (PDOException $e) {}
+
         return $pdo;
     } catch (PDOException $e) {
         die("Error de conexión a la base de datos: " . $e->getMessage());

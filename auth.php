@@ -19,3 +19,7 @@ function requireLogin() {
         exit;
     }
 }
+
+function isAdmin() {
+    return getActiveUsername() === 'admin';
+}

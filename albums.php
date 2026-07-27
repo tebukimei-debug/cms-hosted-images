@@ -99,8 +99,12 @@ $albums = $stmt->fetchAll();
         <!-- Lista de Álbumes -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <?php foreach ($albums as $album): ?>
-                <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-                    <h3 class="text-xl font-bold mb-2 truncate" title="<?= htmlspecialchars($album['name']) ?>"><?= htmlspecialchars($album['name']) ?></h3>
+                <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 relative group">
+                    <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition bg-black/50 p-1 rounded">
+                        <button onclick="renameAlbum(<?= $album['id'] ?>, '<?= htmlspecialchars(addslashes($album['name'])) ?>')" class="text-yellow-400 hover:text-yellow-300" title="Renombrar">✏️</button>
+                        <button onclick="deleteAlbum(<?= $album['id'] ?>)" class="text-red-400 hover:text-red-300" title="Eliminar">🗑️</button>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 truncate pr-12" title="<?= htmlspecialchars($album['name']) ?>"><?= htmlspecialchars($album['name']) ?></h3>
                     <p class="text-gray-400 text-sm mb-4">
                         <?= $album['image_count'] ?> imágenes &bull; 
                         <?php
@@ -130,6 +134,32 @@ $albums = $stmt->fetchAll();
                 passwordField.querySelector('input').required = false;
             }
         });
+
+        async function renameAlbum(id, oldName) {
+            const newName = prompt("Nuevo nombre del álbum:", oldName);
+            if (!newName || newName === oldName) return;
+
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'rename_album', id: id, new_name: newName })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error);
+        }
+
+        async function deleteAlbum(id) {
+            if (!confirm("¿Seguro que quieres borrar este álbum? Las fotos en su interior NO se borrarán, solo dejarán de pertenecer a este álbum.")) return;
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'delete_album', id: id })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error);
+        }
     </script>
 </body>
 </html>

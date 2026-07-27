@@ -89,9 +89,24 @@ if ($authOk) {
         <?php else: ?>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <?php foreach ($images as $img): ?>
-                    <a href="<?= htmlspecialchars($img['url']) ?>" target="_blank" class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 block hover:border-blue-500 transition">
-                        <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
-                    </a>
+                    <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
+                        <a href="<?= htmlspecialchars($img['url']) ?>" target="_blank" class="block">
+                            <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
+                        </a>
+                        
+                        <?php if ($img['title']): ?>
+                            <div class="absolute bottom-0 w-full bg-black/70 p-2 text-xs truncate">
+                                <?= htmlspecialchars($img['title']) ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (isAdmin() || (isLoggedIn() && $img['user_id'] == getActiveUserId())): ?>
+                            <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition bg-black/50 p-1 rounded">
+                                <button onclick="renameImage('<?= $img['unique_id'] ?>', '<?= htmlspecialchars(addslashes($img['title'] ?? '')) ?>')" class="text-yellow-400 hover:text-yellow-300" title="Renombrar">✏️</button>
+                                <button onclick="deleteImage('<?= $img['unique_id'] ?>')" class="text-red-400 hover:text-red-300" title="Eliminar">🗑️</button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
                 <?php if (empty($images)): ?>
                     <p class="text-gray-400 col-span-4">Este álbum está vacío.</p>
@@ -99,5 +114,32 @@ if ($authOk) {
             </div>
         <?php endif; ?>
     </div>
+
+    <script>
+        async function renameImage(id, currentTitle) {
+            const newTitle = prompt("Nuevo título para la imagen:", currentTitle);
+            if (newTitle === null || newTitle === currentTitle) return;
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'rename_image', id: id, new_name: newTitle })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error);
+        }
+
+        async function deleteImage(id) {
+            if (!confirm("¿Seguro que quieres borrar esta imagen permanentemente?")) return;
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'delete_image', id: id })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error);
+        }
+    </script>
 </body>
 </html>

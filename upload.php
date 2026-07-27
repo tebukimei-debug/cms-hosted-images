@@ -65,8 +65,8 @@ for ($i = 0; $i < $count; $i++) {
     $filename = $uniqueId . '.' . $extension;
     $destination = $uploadDir . $filename;
     $thumbDestination = $thumbDir . $filename;
-    $url = APP_URL . '/uploads/' . $filename;
-    $thumbUrl = APP_URL . '/uploads/thumbs/' . $filename;
+    $url = '/uploads/' . $filename;
+    $thumbUrl = '/uploads/thumbs/' . $filename;
 
     try {
         $sourceImage = null;
