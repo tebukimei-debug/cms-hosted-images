@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["php", "nginx"]
+
+[phases.build]
+cmds = [
+    "composer install --no-dev --no-interaction --prefer-dist",
+    "mkdir -p uploads/thumbs",
+    "chmod -R 777 uploads"
+]

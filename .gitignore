@@ -2,7 +2,4 @@ vendor/
 .env
 .env.*
 .DS_Store
-uploads/*
-!uploads/.gitkeep
-uploads/thumbs/*
-!uploads/thumbs/.gitkeep
+uploads/
