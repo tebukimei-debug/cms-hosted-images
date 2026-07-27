@@ -116,6 +116,10 @@ for ($i = 0; $i < $count; $i++) {
             imagedestroy($thumbImage);
         }
 
+        if (!file_exists($destination)) {
+            throw new Exception("Error al guardar la imagen en el disco. Verifica permisos o espacio.");
+        }
+
         $stmt = $pdo->prepare("INSERT INTO images (unique_id, filename, url, thumb_url, size, mime_type, user_id, album_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([$uniqueId, $filename, $url, $thumbUrl, $size, $type, $userId, $albumId]);
 
