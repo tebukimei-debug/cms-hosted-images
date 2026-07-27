@@ -1,0 +1,7 @@
+{
+    "name": "tebukimei-debug/cms-hosted-images-php",
+    "description": "Chevereto clone in simple PHP",
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    }
+}
