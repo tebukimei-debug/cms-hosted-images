@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
 
-// Obtener las últimas imágenes
 $pdo = getDbConnection();
 $stmt = $pdo->query("SELECT * FROM images ORDER BY created_at DESC LIMIT 20");
 $images = $stmt->fetchAll();
@@ -29,15 +28,15 @@ $images = $stmt->fetchAll();
             <input type="file" id="fileInput" class="hidden" accept="image/*">
         </div>
 
-        <div id="progress" class="hidden mb-8 text-center text-blue-400">Subiendo...</div>
+        <div id="progress" class="hidden mb-8 text-center text-blue-400">Procesando y optimizando...</div>
 
         <!-- Galería -->
         <h2 class="text-2xl font-semibold mb-6">Últimas Imágenes</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
             <?php foreach ($images as $img): ?>
-                <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-                    <img src="<?= htmlspecialchars($img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
-                </div>
+                <a href="<?= htmlspecialchars($img['url']) ?>" target="_blank" class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 block hover:border-blue-500 transition">
+                    <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
+                </a>
             <?php endforeach; ?>
         </div>
     </div>
@@ -85,7 +84,7 @@ $images = $stmt->fetchAll();
                 const data = await res.json();
                 
                 if (data.success) {
-                    location.reload(); // Recargar para ver la nueva imagen
+                    location.reload();
                 } else {
                     alert('Error: ' + data.error);
                 }

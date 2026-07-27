@@ -2,3 +2,4 @@ vendor/
 .env
 .env.*
 .DS_Store
+uploads/
