@@ -108,6 +108,64 @@ try {
 
         echo json_encode(['success' => true]);
 
+    } elseif ($action === 'bulk_delete_images') {
+        $ids = $data['ids'] ?? [];
+        if (!is_array($ids) || empty($ids)) throw new Exception("No se proporcionaron imágenes");
+
+        $uploadDir = __DIR__ . '/uploads/';
+        $thumbDir = __DIR__ . '/uploads/thumbs/';
+
+        $deletedCount = 0;
+        foreach ($ids as $imgId) {
+            $stmt = $pdo->prepare("SELECT filename, user_id FROM images WHERE unique_id = ?");
+            $stmt->execute([$imgId]);
+            $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($image && ($isAdmin || $image['user_id'] == $userId)) {
+                @unlink($uploadDir . $image['filename']);
+                @unlink($thumbDir . preg_replace('/\.[a-zA-Z0-9]+$/', '.webp', $image['filename'])); // Thumb is now webp, or attempt both
+                @unlink($thumbDir . $image['filename']); // Legacy thumb
+                
+                $delStmt = $pdo->prepare("DELETE FROM images WHERE unique_id = ?");
+                $delStmt->execute([$imgId]);
+                $deletedCount++;
+            }
+        }
+
+        echo json_encode(['success' => true, 'deleted' => $deletedCount]);
+
+    } elseif ($action === 'bulk_move_images') {
+        $ids = $data['ids'] ?? [];
+        $newAlbumId = $data['new_album_id'] ?? null;
+        if (!is_array($ids) || empty($ids)) throw new Exception("No se proporcionaron imágenes");
+
+        // Verify album ownership if not moving to root
+        if ($newAlbumId !== null && $newAlbumId !== '') {
+            $stmt = $pdo->prepare("SELECT user_id FROM albums WHERE id = ?");
+            $stmt->execute([$newAlbumId]);
+            $album = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$album || (!$isAdmin && $album['user_id'] != $userId)) {
+                throw new Exception("Álbum destino inválido o sin permisos");
+            }
+        } else {
+            $newAlbumId = null;
+        }
+
+        $movedCount = 0;
+        foreach ($ids as $imgId) {
+            $stmt = $pdo->prepare("SELECT user_id FROM images WHERE unique_id = ?");
+            $stmt->execute([$imgId]);
+            $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($image && ($isAdmin || $image['user_id'] == $userId)) {
+                $updStmt = $pdo->prepare("UPDATE images SET album_id = ? WHERE unique_id = ?");
+                $updStmt->execute([$newAlbumId, $imgId]);
+                $movedCount++;
+            }
+        }
+
+        echo json_encode(['success' => true, 'moved' => $movedCount]);
+
     } else {
         throw new Exception("Acción desconocida");
     }

@@ -45,9 +45,27 @@ if (!$isOwner) {
 }
 
 if ($authOk) {
-    $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id = ? ORDER BY created_at DESC");
+    // 1. Lógica de ordenamiento (Sorting)
+    $sort = $_GET['sort'] ?? 'newest';
+    $orderBy = "created_at DESC";
+    
+    switch ($sort) {
+        case 'oldest': $orderBy = "created_at ASC"; break;
+        case 'name_asc': $orderBy = "COALESCE(NULLIF(title, ''), filename) ASC"; break;
+        case 'name_desc': $orderBy = "COALESCE(NULLIF(title, ''), filename) DESC"; break;
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id = ? ORDER BY $orderBy");
     $stmt->execute([$album['id']]);
     $images = $stmt->fetchAll();
+
+    // 2. Cargar lista de álbumes para mover (Solo si es dueño)
+    $userAlbums = [];
+    if ($isOwner) {
+        $stmtAlbums = $pdo->prepare("SELECT id, name FROM albums WHERE user_id = ? AND id != ? ORDER BY name ASC");
+        $stmtAlbums->execute([$userId, $album['id']]);
+        $userAlbums = $stmtAlbums->fetchAll();
+    }
 
     $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
     $domain = $protocol . '://' . $_SERVER['HTTP_HOST'];
@@ -57,14 +75,14 @@ if ($authOk) {
     $albumGridCode = '';
 
     foreach ($images as $img) {
-        $fullUrl = $domain . $img['url'];
         $thumbUrl = $domain . ($img['thumb_url'] ?? $img['url']);
         $viewUrl = $domain . '/view.php?id=' . $img['unique_id'];
         $name = htmlspecialchars($img['title'] ?: $img['filename'], ENT_QUOTES);
 
-        $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url]\n";
-        $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>\n";
-        $albumGridCode .= "<a href=\"{$fullUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>";
+        // Sin saltos de línea para evitar problemas, src=thumb, href=viewer
+        $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url] ";
+        $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a> ";
+        $albumGridCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>";
     }
 }
 ?>
@@ -139,6 +157,46 @@ if ($authOk) {
                 </form>
             </div>
         <?php else: ?>
+            <!-- Controles de Álbum: Ordenamiento y Selección Masiva -->
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 bg-slate-800 p-4 rounded-lg border border-slate-700 gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="text-sm">
+                        <label class="text-gray-400 mr-2">Ordenar:</label>
+                        <select onchange="window.location.href='?id=<?= $album['unique_id'] ?>&sort='+this.value" class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-white text-sm outline-none focus:border-indigo-500">
+                            <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Más recientes</option>
+                            <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Más antiguas</option>
+                            <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Nombre (A-Z)</option>
+                            <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Nombre (Z-A)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <?php if ($isOwner && count($images) > 0): ?>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                        <input type="checkbox" id="selectAllCb" class="form-checkbox h-4 w-4 text-indigo-600 bg-slate-900 border-slate-600 rounded" onchange="toggleAll(this)">
+                        Seleccionar Todo
+                    </label>
+                    <div id="bulkActionsBar" class="hidden flex items-center gap-2 border-l border-slate-600 pl-4">
+                        <span id="selectedCountTxt" class="text-xs text-indigo-400 font-bold mr-2">0 seleccionadas</span>
+                        
+                        <div class="relative">
+                            <select id="bulkMoveSelect" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none">
+                                <option value="" disabled selected>Mover a...</option>
+                                <option value="0">(Sin Álbum / General)</option>
+                                <?php foreach ($userAlbums as $ua): ?>
+                                    <option value="<?= $ua['id'] ?>"><?= htmlspecialchars($ua['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button onclick="bulkMove()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-2 rounded ml-1 transition">Mover</button>
+                        </div>
+
+                        <button onclick="bulkDelete()" class="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded ml-2 transition">Eliminar</button>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
                 <?php foreach ($images as $img): ?>
                     <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
@@ -146,6 +204,12 @@ if ($authOk) {
                             <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
                         </a>
                         
+                        <?php if ($isOwner): ?>
+                            <div class="absolute top-2 left-2 z-10 bg-black/50 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <input type="checkbox" class="img-checkbox form-checkbox h-4 w-4 text-indigo-600 cursor-pointer" value="<?= $img['unique_id'] ?>" onchange="updateBulkUI()">
+                            </div>
+                        <?php endif; ?>
+
                         <?php if ($img['title']): ?>
                             <div class="absolute bottom-0 w-full bg-black/70 p-2 text-xs truncate">
                                 <?= htmlspecialchars($img['title']) ?>
@@ -168,6 +232,7 @@ if ($authOk) {
     </div>
 
     <script>
+        // Funciones individuales
         async function renameImage(id, currentTitle) {
             const newTitle = prompt("Nuevo título para la imagen:", currentTitle);
             if (newTitle === null || newTitle === currentTitle) return;
@@ -191,6 +256,75 @@ if ($authOk) {
             const data = await res.json();
             if (data.success) location.reload();
             else alert(data.error);
+        }
+
+        // Funciones masivas (Bulk)
+        function getSelectedIds() {
+            const checkboxes = document.querySelectorAll('.img-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function toggleAll(source) {
+            const checkboxes = document.querySelectorAll('.img-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+            updateBulkUI();
+        }
+
+        function updateBulkUI() {
+            const ids = getSelectedIds();
+            const bulkBar = document.getElementById('bulkActionsBar');
+            const countTxt = document.getElementById('selectedCountTxt');
+            const selectAllCb = document.getElementById('selectAllCb');
+            const allCheckboxes = document.querySelectorAll('.img-checkbox');
+            
+            if (bulkBar) {
+                if (ids.length > 0) {
+                    bulkBar.classList.remove('hidden');
+                    countTxt.innerText = ids.length + (ids.length === 1 ? ' seleccionada' : ' seleccionadas');
+                } else {
+                    bulkBar.classList.add('hidden');
+                }
+                
+                if (selectAllCb) {
+                    selectAllCb.checked = (ids.length === allCheckboxes.length && allCheckboxes.length > 0);
+                }
+            }
+        }
+
+        async function bulkDelete() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+            if (!confirm(`¿Seguro que quieres borrar ${ids.length} imágenes permanentemente?`)) return;
+            
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'bulk_delete_images', ids: ids })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error || 'Error borrando imágenes');
+        }
+
+        async function bulkMove() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+            
+            const select = document.getElementById('bulkMoveSelect');
+            const targetAlbum = select.value;
+            if (targetAlbum === "") {
+                alert("Selecciona un álbum destino primero");
+                return;
+            }
+            
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'bulk_move_images', ids: ids, new_album_id: targetAlbum === "0" ? null : targetAlbum })
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+            else alert(data.error || 'Error moviendo imágenes');
         }
     </script>
 </body>
