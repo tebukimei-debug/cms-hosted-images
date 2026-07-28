@@ -64,9 +64,13 @@ for ($i = 0; $i < $count; $i++) {
     $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
     $filename = $uniqueId . '.' . $extension;
     $destination = $uploadDir . $filename;
-    $thumbDestination = $thumbDir . $filename;
+    
+    // El thumbnail siempre será .webp
+    $thumbFilename = $uniqueId . '.webp';
+    $thumbDestination = $thumbDir . $thumbFilename;
+    
     $url = '/uploads/' . $filename;
-    $thumbUrl = '/uploads/thumbs/' . $filename;
+    $thumbUrl = '/uploads/thumbs/' . $thumbFilename;
 
     try {
         $sourceImage = null;
@@ -92,25 +96,48 @@ for ($i = 0; $i < $count; $i++) {
             elseif ($extension === 'webp') imagewebp($sourceImage, $destination, 90);
             elseif ($extension === 'gif') imagegif($sourceImage, $destination);
 
-            $maxThumbSize = 400;
-            $ratio = min($maxThumbSize / $width, $maxThumbSize / $height);
-            $newWidth = max(1, (int)($width * $ratio));
-            $newHeight = max(1, (int)($height * $ratio));
-
-            $thumbImage = imagecreatetruecolor($newWidth, $newHeight);
-            if ($extension === 'png' || $extension === 'webp') {
-                imagealphablending($thumbImage, false);
-                imagesavealpha($thumbImage, true);
-                $transparent = imagecolorallocatealpha($thumbImage, 255, 255, 255, 127);
-                imagefilledrectangle($thumbImage, 0, 0, $newWidth, $newHeight, $transparent);
+            // Determinar dimensiones objetivo según orientación
+            if ($width > $height) {
+                // Horizontal (Landscape)
+                $thumbW = 200;
+                $thumbH = 150;
+            } else {
+                // Vertical (Portrait) o Cuadrado
+                $thumbW = 150;
+                $thumbH = 200;
             }
 
-            imagecopyresampled($thumbImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            // Cálculos para recorte (Crop) centrado
+            $targetRatio = $thumbW / $thumbH;
+            $sourceRatio = $width / $height;
 
-            if ($extension === 'jpg' || $extension === 'jpeg') imagejpeg($thumbImage, $thumbDestination, 80);
-            elseif ($extension === 'png') imagepng($thumbImage, $thumbDestination, 8);
-            elseif ($extension === 'webp') imagewebp($thumbImage, $thumbDestination, 80);
-            elseif ($extension === 'gif') imagegif($thumbImage, $thumbDestination);
+            if ($sourceRatio > $targetRatio) {
+                // Imagen original es más ancha, recortar lados
+                $cropH = $height;
+                $cropW = (int)($height * $targetRatio);
+                $cropX = (int)(($width - $cropW) / 2);
+                $cropY = 0;
+            } else {
+                // Imagen original es más alta, recortar arriba/abajo
+                $cropW = $width;
+                $cropH = (int)($width / $targetRatio);
+                $cropX = 0;
+                $cropY = (int)(($height - $cropH) / 2);
+            }
+
+            $thumbImage = imagecreatetruecolor($thumbW, $thumbH);
+            
+            // Siempre habilitar transparencia porque se guarda como .webp
+            imagealphablending($thumbImage, false);
+            imagesavealpha($thumbImage, true);
+            $transparent = imagecolorallocatealpha($thumbImage, 255, 255, 255, 127);
+            imagefilledrectangle($thumbImage, 0, 0, $thumbW, $thumbH, $transparent);
+
+            // Copiar y redimensionar con recorte (crop)
+            imagecopyresampled($thumbImage, $sourceImage, 0, 0, $cropX, $cropY, $thumbW, $thumbH, $cropW, $cropH);
+
+            // Guardar siempre como webp con calidad 80
+            imagewebp($thumbImage, $thumbDestination, 80);
 
             imagedestroy($sourceImage);
             imagedestroy($thumbImage);
