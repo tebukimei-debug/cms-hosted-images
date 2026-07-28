@@ -35,6 +35,16 @@ $isOwner = (isLoggedIn() && getActiveUserId() == $img['user_id']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viendo imagen - <?= htmlspecialchars($name) ?></title>
+    
+    <!-- OpenGraph / Embed Tags -->
+    <meta property="og:title" content="<?= htmlspecialchars($name) ?>" />
+    <meta property="og:type" content="image" />
+    <meta property="og:url" content="<?= htmlspecialchars($viewUrl) ?>" />
+    <meta property="og:image" content="<?= htmlspecialchars($fullUrl) ?>" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= htmlspecialchars($name) ?>">
+    <meta name="twitter:image" content="<?= htmlspecialchars($fullUrl) ?>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; }

@@ -54,18 +54,18 @@ if ($authOk) {
 
     $albumForumCode = '';
     $albumHtmlCode = '';
-    $albumGridCode = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(24%, 1fr)); gap: 10px;">' . "\n";
+    $albumGridCode = '';
 
     foreach ($images as $img) {
+        $fullUrl = $domain . $img['url'];
         $thumbUrl = $domain . ($img['thumb_url'] ?? $img['url']);
         $viewUrl = $domain . '/view.php?id=' . $img['unique_id'];
         $name = htmlspecialchars($img['title'] ?: $img['filename'], ENT_QUOTES);
 
         $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url]\n";
         $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>\n";
-        $albumGridCode .= "    <a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>\n";
+        $albumGridCode .= "<a href=\"{$fullUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>";
     }
-    $albumGridCode .= '</div>';
 }
 ?>
 <!DOCTYPE html>

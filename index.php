@@ -235,7 +235,7 @@ if (isLoggedIn()) {
             const origin = window.location.origin;
             let forumAll = [];
             let htmlAll = [];
-            let htmlGridAll = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(24%, 1fr)); gap: 10px;">\n';
+            let htmlGridAll = '';
             
             individualResults.innerHTML = '';
 
@@ -247,11 +247,11 @@ if (isLoggedIn()) {
                 // Los códigos usan la URL de visualización en lugar de la foto directa
                 const forumCode = `[url=${viewUrl}][img]${thumbUrl}[/img][/url]`;
                 const htmlCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
-                const gridCode = `    <a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" style="width: 100%; object-fit: cover;" border="0"></a>`;
+                const gridCode = `<a href="${fullUrl}"><img src="${thumbUrl}" alt="${u.name}" style="width: 100%; object-fit: cover;" border="0"></a>`;
                 
                 forumAll.push(forumCode);
                 htmlAll.push(htmlCode);
-                htmlGridAll += gridCode + '\n';
+                htmlGridAll += gridCode;
 
                 const indDiv = document.createElement('div');
                 indDiv.className = "flex flex-col md:flex-row items-center bg-slate-900 p-4 rounded-lg border border-slate-700 gap-6";
@@ -279,8 +279,6 @@ if (isLoggedIn()) {
                 `;
                 individualResults.appendChild(indDiv);
             });
-
-            htmlGridAll += '</div>';
 
             allForumLinks.value = forumAll.join('\n');
             allHtmlLinks.value = htmlAll.join('\n');
