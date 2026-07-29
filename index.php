@@ -235,7 +235,7 @@ if (isLoggedIn()) {
             const origin = window.location.origin;
             let forumAll = [];
             let htmlAll = [];
-            let htmlGridAll = '';
+            let htmlGridAll = '<div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(24%, 1fr));gap: 16px;align-items: start;padding: 16px">';
             
             individualResults.innerHTML = '';
 
@@ -247,7 +247,7 @@ if (isLoggedIn()) {
                 // Los códigos usan la URL de visualización en lugar de la foto directa
                 const forumCode = `[url=${viewUrl}][img]${thumbUrl}[/img][/url]`;
                 const htmlCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
-                const gridCode = `<a href="${fullUrl}"><img src="${thumbUrl}" alt="${u.name}" style="width: 100%; object-fit: cover;" border="0"></a>`;
+                const gridCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
                 
                 forumAll.push(forumCode);
                 htmlAll.push(htmlCode);
@@ -280,8 +280,10 @@ if (isLoggedIn()) {
                 individualResults.appendChild(indDiv);
             });
 
-            allForumLinks.value = forumAll.join('\n');
-            allHtmlLinks.value = htmlAll.join('\n');
+            htmlGridAll += '</div>';
+
+            allForumLinks.value = forumAll.join(' ');
+            allHtmlLinks.value = htmlAll.join(' ');
             document.getElementById('allHtmlGridLinks').value = htmlGridAll;
         }
 

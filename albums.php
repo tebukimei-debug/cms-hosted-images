@@ -96,24 +96,43 @@ $albums = $stmt->fetchAll();
             </form>
         </div>
 
+        <?php
+            $stmtGeneral = $pdo->prepare("SELECT COUNT(*) FROM images WHERE album_id IS NULL AND user_id = ?");
+            $stmtGeneral->execute([$userId]);
+            $generalCount = $stmtGeneral->fetchColumn();
+        ?>
+
         <!-- Lista de Álbumes -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Álbum General Fijo -->
+            <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 relative group flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xl font-bold mb-2 truncate pr-12 text-indigo-300">General (Sin Álbum)</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        <?= $generalCount ?> imágenes &bull; <span class="text-green-400">Público</span>
+                    </p>
+                </div>
+                <a href="/album.php?id=general" class="text-indigo-400 hover:underline block text-center border border-indigo-400/30 rounded py-2 hover:bg-indigo-400/10 transition mt-auto">Ver Álbum</a>
+            </div>
+            
             <?php foreach ($albums as $album): ?>
-                <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 relative group">
+                <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 relative group flex flex-col justify-between">
                     <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition bg-black/50 p-1 rounded">
                         <button onclick="renameAlbum(<?= $album['id'] ?>, '<?= htmlspecialchars(addslashes($album['name'])) ?>')" class="text-yellow-400 hover:text-yellow-300" title="Renombrar">✏️</button>
                         <button onclick="deleteAlbum(<?= $album['id'] ?>)" class="text-red-400 hover:text-red-300" title="Eliminar">🗑️</button>
                     </div>
-                    <h3 class="text-xl font-bold mb-2 truncate pr-12" title="<?= htmlspecialchars($album['name']) ?>"><?= htmlspecialchars($album['name']) ?></h3>
-                    <p class="text-gray-400 text-sm mb-4">
-                        <?= $album['image_count'] ?> imágenes &bull; 
-                        <?php
-                            if ($album['privacy'] === 'public') echo '<span class="text-green-400">Público</span>';
-                            elseif ($album['privacy'] === 'private') echo '<span class="text-red-400">Privado</span>';
-                            else echo '<span class="text-yellow-400">Contraseña</span>';
-                        ?>
-                    </p>
-                    <a href="/album.php?id=<?= $album['unique_id'] ?>" class="text-blue-400 hover:underline block text-center border border-blue-400/30 rounded py-2 hover:bg-blue-400/10 transition">Ver Álbum</a>
+                    <div>
+                        <h3 class="text-xl font-bold mb-2 truncate pr-12" title="<?= htmlspecialchars($album['name']) ?>"><?= htmlspecialchars($album['name']) ?></h3>
+                        <p class="text-gray-400 text-sm mb-4">
+                            <?= $album['image_count'] ?> imágenes &bull; 
+                            <?php
+                                if ($album['privacy'] === 'public') echo '<span class="text-green-400">Público</span>';
+                                elseif ($album['privacy'] === 'private') echo '<span class="text-red-400">Privado</span>';
+                                else echo '<span class="text-yellow-400">Contraseña</span>';
+                            ?>
+                        </p>
+                    </div>
+                    <a href="/album.php?id=<?= $album['unique_id'] ?>" class="text-blue-400 hover:underline block text-center border border-blue-400/30 rounded py-2 hover:bg-blue-400/10 transition mt-auto">Ver Álbum</a>
                 </div>
             <?php endforeach; ?>
             <?php if (empty($albums)): ?>

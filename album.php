@@ -9,17 +9,34 @@ if (!$uniqueId) {
 }
 
 $pdo = getDbConnection();
-$stmt = $pdo->prepare("SELECT * FROM albums WHERE unique_id = ?");
-$stmt->execute([$uniqueId]);
-$album = $stmt->fetch();
 
-if (!$album) {
-    die("Álbum no encontrado.");
-}
+if ($uniqueId === 'general') {
+    if (!isLoggedIn()) {
+        header('Location: /login.php');
+        exit;
+    }
+    $userId = getActiveUserId();
+    $album = [
+        'id' => null,
+        'unique_id' => 'general',
+        'name' => 'General (Sin Álbum)',
+        'privacy' => 'public',
+        'user_id' => $userId
+    ];
+    $isOwner = true;
+    $authOk = true;
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM albums WHERE unique_id = ?");
+    $stmt->execute([$uniqueId]);
+    $album = $stmt->fetch();
 
-$userId = getActiveUserId();
-$isOwner = ($userId === $album['user_id']);
-$authOk = $isOwner;
+    if (!$album) {
+        die("Álbum no encontrado.");
+    }
+
+    $userId = getActiveUserId();
+    $isOwner = ($userId === $album['user_id']);
+    $authOk = $isOwner;
 
 if (!$isOwner) {
     if ($album['privacy'] === 'private') {
@@ -55,15 +72,25 @@ if ($authOk) {
         case 'name_desc': $orderBy = "COALESCE(NULLIF(title, ''), filename) DESC"; break;
     }
 
-    $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id = ? ORDER BY $orderBy");
-    $stmt->execute([$album['id']]);
+    if ($album['id'] === null) {
+        $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id IS NULL AND user_id = ? ORDER BY $orderBy");
+        $stmt->execute([$userId]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM images WHERE album_id = ? ORDER BY $orderBy");
+        $stmt->execute([$album['id']]);
+    }
     $images = $stmt->fetchAll();
 
     // 2. Cargar lista de álbumes para mover (Solo si es dueño)
     $userAlbums = [];
     if ($isOwner) {
-        $stmtAlbums = $pdo->prepare("SELECT id, name FROM albums WHERE user_id = ? AND id != ? ORDER BY name ASC");
-        $stmtAlbums->execute([$userId, $album['id']]);
+        if ($album['id'] === null) {
+            $stmtAlbums = $pdo->prepare("SELECT id, name FROM albums WHERE user_id = ? ORDER BY name ASC");
+            $stmtAlbums->execute([$userId]);
+        } else {
+            $stmtAlbums = $pdo->prepare("SELECT id, name FROM albums WHERE user_id = ? AND id != ? ORDER BY name ASC");
+            $stmtAlbums->execute([$userId, $album['id']]);
+        }
         $userAlbums = $stmtAlbums->fetchAll();
     }
 
@@ -72,7 +99,7 @@ if ($authOk) {
 
     $albumForumCode = '';
     $albumHtmlCode = '';
-    $albumGridCode = '';
+    $albumGridCode = '<div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(24%, 1fr));gap: 16px;align-items: start;padding: 16px">';
 
     foreach ($images as $img) {
         $thumbUrl = $domain . ($img['thumb_url'] ?? $img['url']);
@@ -80,9 +107,15 @@ if ($authOk) {
         $name = htmlspecialchars($img['title'] ?: $img['filename'], ENT_QUOTES);
 
         // Sin saltos de línea para evitar problemas, src=thumb, href=viewer
-        $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url] ";
-        $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a> ";
-        $albumGridCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" style=\"width: 100%; object-fit: cover;\" border=\"0\"></a>";
+        $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url]";
+        $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>";
+        $albumGridCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>";
+    }
+    
+    if (count($images) > 0) {
+        $albumGridCode .= '</div>';
+    } else {
+        $albumGridCode = '';
     }
 }
 ?>
