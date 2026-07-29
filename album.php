@@ -37,6 +37,7 @@ if ($uniqueId === 'general') {
     $userId = getActiveUserId();
     $isOwner = ($userId === $album['user_id']);
     $authOk = $isOwner;
+}
 
 if (!$isOwner) {
     if ($album['privacy'] === 'private') {
