@@ -63,7 +63,6 @@ if (!$isOwner) {
 }
 
 if ($authOk) {
-    // 1. Lógica de ordenamiento (Sorting)
     $sort = $_GET['sort'] ?? 'newest';
     $orderBy = "created_at DESC";
     
@@ -82,7 +81,6 @@ if ($authOk) {
     }
     $images = $stmt->fetchAll();
 
-    // 2. Cargar lista de álbumes para mover (Solo si es dueño)
     $userAlbums = [];
     if ($isOwner) {
         if ($album['id'] === null) {
@@ -107,7 +105,6 @@ if ($authOk) {
         $viewUrl = $domain . '/view.php?id=' . $img['unique_id'];
         $name = htmlspecialchars($img['title'] ?: $img['filename'], ENT_QUOTES);
 
-        // Sin saltos de línea para evitar problemas, src=thumb, href=viewer
         $albumForumCode .= "[url={$viewUrl}][img]{$thumbUrl}[/img][/url]";
         $albumHtmlCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>";
         $albumGridCode .= "<a href=\"{$viewUrl}\"><img src=\"{$thumbUrl}\" alt=\"{$name}\" border=\"0\"></a>";
@@ -126,147 +123,182 @@ if ($authOk) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($album['name']) ?> - Chevereto PHP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; }
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #0a0e1a; color: #e2e8f0; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(99, 102, 241, 0.15); }
+        .glass-light { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(148, 163, 184, 0.1); }
+        .gradient-text { background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-color: rgba(99, 102, 241, 0.3); }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tag-public { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .tag-private { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .tag-password { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
     </style>
 </head>
-<body class="min-h-screen p-8">
-    <div class="max-w-4xl mx-auto flex justify-between mb-8">
-        <a href="<?= $isOwner ? '/albums.php' : '/' ?>" class="text-blue-400 hover:underline self-center">&larr; Volver</a>
-    </div>
+<body class="min-h-screen">
 
-    <div class="max-w-4xl mx-auto">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <!-- Navbar -->
+    <nav class="glass sticky top-0 z-40 mb-8">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold gradient-text tracking-tight">📷 UGirls</a>
+            <div class="flex items-center gap-4">
+                <a href="<?= $isOwner ? '/albums.php' : '/' ?>" class="text-sm text-gray-300 hover:text-indigo-400 transition font-medium">← Volver</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-6 pb-16">
+        <!-- Album Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 fade-in">
             <div>
-                <h1 class="text-4xl font-bold mb-2"><?= htmlspecialchars($album['name']) ?></h1>
-                <p class="text-gray-400">
-                    Privacidad: 
-                    <strong class="text-white uppercase text-xs tracking-wider">
-                        <?= $album['privacy'] ?>
-                    </strong>
-                </p>
+                <h1 class="text-4xl font-extrabold gradient-text mb-1"><?= htmlspecialchars($album['name']) ?></h1>
+                <div class="flex items-center gap-3 mt-2">
+                    <?php
+                        $p = $album['privacy'];
+                        if ($p === 'public') echo '<span class="tag tag-public">Público</span>';
+                        elseif ($p === 'private') echo '<span class="tag tag-private">Privado</span>';
+                        else echo '<span class="tag tag-password">Contraseña</span>';
+                    ?>
+                    <?php if ($authOk): ?>
+                        <span class="text-xs text-gray-500"><?= count($images) ?> imágenes</span>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php if ($authOk && count($images) > 0): ?>
-                <button onclick="document.getElementById('albumCodes').classList.toggle('hidden')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <button onclick="document.getElementById('albumCodes').classList.toggle('hidden')" class="btn-primary text-white font-semibold py-2.5 px-6 rounded-xl flex items-center gap-2 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
                     </svg>
-                    Compartir Álbum
+                    Compartir Carpeta
                 </button>
             <?php endif; ?>
         </div>
 
         <?php if ($authOk && count($images) > 0): ?>
-            <!-- Panel de Códigos del Álbum -->
-            <div id="albumCodes" class="hidden mb-12 bg-slate-800 border border-slate-700 p-6 rounded-xl">
-                <h2 class="text-xl font-bold mb-4 text-indigo-400">Códigos para compartir todas las imágenes</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Share Codes -->
+            <div id="albumCodes" class="hidden mb-10 glass rounded-2xl p-6 fade-in">
+                <h2 class="text-lg font-bold mb-4 text-indigo-400 flex items-center gap-2">
+                    <span>🔗</span> Códigos para compartir
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                        <label class="block text-gray-300 font-semibold mb-2 text-sm">Forum links (BBCode)</label>
-                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumForumCode)) ?></textarea>
+                        <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">BBCode (Foro)</label>
+                        <textarea class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumForumCode)) ?></textarea>
                     </div>
                     <div>
-                        <label class="block text-gray-300 font-semibold mb-2 text-sm">HTML links</label>
-                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumHtmlCode)) ?></textarea>
+                        <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">HTML Links</label>
+                        <textarea class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumHtmlCode)) ?></textarea>
                     </div>
                     <div>
-                        <label class="block text-gray-300 font-semibold mb-2 text-sm">HTML code grid (4 Columnas)</label>
-                        <textarea class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-xs font-mono focus:outline-none focus:border-indigo-500" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumGridCode)) ?></textarea>
+                        <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">HTML Grid (4 Col.)</label>
+                        <textarea class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"><?= htmlspecialchars(trim($albumGridCode)) ?></textarea>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
 
         <?php if (!$authOk): ?>
-            <div class="bg-slate-800 p-8 rounded-xl max-w-md mx-auto text-center border border-slate-700">
-                <h2 class="text-xl font-semibold mb-4">Este álbum está protegido</h2>
+            <div class="glass rounded-2xl p-10 max-w-md mx-auto text-center fade-in">
+                <div class="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-5">
+                    <span class="text-3xl">🔒</span>
+                </div>
+                <h2 class="text-xl font-bold mb-4">Este álbum está protegido</h2>
                 <?php if (isset($error)): ?>
-                    <div class="bg-red-500/20 text-red-300 p-2 rounded mb-4"><?= htmlspecialchars($error) ?></div>
+                    <div class="bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-xl mb-4 text-sm"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
                 <form method="POST">
-                    <input type="password" name="album_password" placeholder="Ingresa la contraseña" class="w-full bg-slate-700 border border-slate-600 rounded px-4 py-2 text-white text-center mb-4" required>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">Desbloquear</button>
+                    <input type="password" name="album_password" placeholder="Ingresa la contraseña" class="w-full bg-slate-800/80 border border-slate-600/50 rounded-xl px-4 py-3 text-white text-center mb-4" required>
+                    <button type="submit" class="btn-primary text-white font-semibold py-3 px-8 rounded-xl w-full">Desbloquear</button>
                 </form>
             </div>
         <?php else: ?>
-            <!-- Controles de Álbum: Ordenamiento y Selección Masiva -->
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 bg-slate-800 p-4 rounded-lg border border-slate-700 gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="text-sm">
-                        <label class="text-gray-400 mr-2">Ordenar:</label>
-                        <select onchange="window.location.href='?id=<?= $album['unique_id'] ?>&sort='+this.value" class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-white text-sm outline-none focus:border-indigo-500">
-                            <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Más recientes</option>
-                            <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Más antiguas</option>
-                            <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Nombre (A-Z)</option>
-                            <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Nombre (Z-A)</option>
-                        </select>
-                    </div>
+            <!-- Controls: Sort & Bulk -->
+            <div class="glass rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 fade-in">
+                <div class="flex items-center gap-3">
+                    <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Ordenar:</label>
+                    <select onchange="window.location.href='?id=<?= $album['unique_id'] ?>&sort='+this.value" class="bg-slate-800/80 border border-slate-600/50 rounded-lg px-3 py-2 text-white text-sm">
+                        <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Más recientes</option>
+                        <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Más antiguas</option>
+                        <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : '' ?>>Nombre (A-Z)</option>
+                        <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : '' ?>>Nombre (Z-A)</option>
+                    </select>
                 </div>
                 
                 <?php if ($isOwner && count($images) > 0): ?>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3 flex-wrap">
                     <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                        <input type="checkbox" id="selectAllCb" class="form-checkbox h-4 w-4 text-indigo-600 bg-slate-900 border-slate-600 rounded" onchange="toggleAll(this)">
-                        Seleccionar Todo
+                        <input type="checkbox" id="selectAllCb" class="form-checkbox h-4 w-4 text-indigo-600 rounded" onchange="toggleAll(this)">
+                        <span class="text-xs font-medium">Seleccionar Todo</span>
                     </label>
-                    <div id="bulkActionsBar" class="hidden flex items-center gap-2 border-l border-slate-600 pl-4">
-                        <span id="selectedCountTxt" class="text-xs text-indigo-400 font-bold mr-2">0 seleccionadas</span>
+                    <div id="bulkActionsBar" class="hidden flex items-center gap-2 border-l border-slate-600/50 pl-3">
+                        <span id="selectedCountTxt" class="text-xs text-indigo-400 font-bold">0</span>
                         
-                        <div class="relative">
-                            <select id="bulkMoveSelect" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-white text-xs outline-none">
-                                <option value="" disabled selected>Mover a...</option>
-                                <option value="0">(Sin Álbum / General)</option>
-                                <?php foreach ($userAlbums as $ua): ?>
-                                    <option value="<?= $ua['id'] ?>"><?= htmlspecialchars($ua['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button onclick="bulkMove()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-2 rounded ml-1 transition">Mover</button>
-                        </div>
-
-                        <button onclick="bulkDelete()" class="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded ml-2 transition">Eliminar</button>
+                        <select id="bulkMoveSelect" class="bg-slate-800/80 border border-slate-600/50 rounded-lg px-2 py-1.5 text-white text-xs">
+                            <option value="" disabled selected>Mover a...</option>
+                            <option value="0">(General)</option>
+                            <?php foreach ($userAlbums as $ua): ?>
+                                <option value="<?= $ua['id'] ?>"><?= htmlspecialchars($ua['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button onclick="bulkMove()" class="btn-primary text-white text-xs py-1.5 px-3 rounded-lg">Mover</button>
+                        <button onclick="bulkDelete()" class="btn-danger text-white text-xs py-1.5 px-3 rounded-lg">Eliminar</button>
                     </div>
                 </div>
                 <?php endif; ?>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
+            <!-- Gallery Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 fade-in" id="gallery">
                 <?php foreach ($images as $img): ?>
-                    <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
-                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block">
-                            <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
+                    <div class="rounded-xl overflow-hidden border border-slate-700/40 relative group card-hover bg-slate-800/40">
+                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block aspect-[4/3] overflow-hidden">
+                            <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         </a>
                         
                         <?php if ($isOwner): ?>
-                            <div class="absolute top-2 left-2 z-10 bg-black/50 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                <input type="checkbox" class="img-checkbox form-checkbox h-4 w-4 text-indigo-600 cursor-pointer" value="<?= $img['unique_id'] ?>" onchange="updateBulkUI()">
+                            <div class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <input type="checkbox" class="img-checkbox form-checkbox h-4 w-4 text-indigo-600 cursor-pointer rounded bg-black/40" value="<?= $img['unique_id'] ?>" onchange="updateBulkUI()">
                             </div>
                         <?php endif; ?>
 
                         <?php if ($img['title']): ?>
-                            <div class="absolute bottom-0 w-full bg-black/70 p-2 text-xs truncate">
-                                <?= htmlspecialchars($img['title']) ?>
+                            <div class="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                                <span class="text-xs text-gray-200 font-medium truncate block"><?= htmlspecialchars($img['title']) ?></span>
                             </div>
                         <?php endif; ?>
                         
                         <?php if (isAdmin() || (isLoggedIn() && $img['user_id'] == getActiveUserId())): ?>
-                            <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition bg-black/50 p-1 rounded">
-                                <button onclick="renameImage('<?= $img['unique_id'] ?>', '<?= htmlspecialchars(addslashes($img['title'] ?? '')) ?>')" class="text-yellow-400 hover:text-yellow-300" title="Renombrar">✏️</button>
-                                <button onclick="deleteImage('<?= $img['unique_id'] ?>')" class="text-red-400 hover:text-red-300" title="Eliminar">🗑️</button>
+                            <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm p-1.5 rounded-lg">
+                                <button onclick="renameImage('<?= $img['unique_id'] ?>', '<?= htmlspecialchars(addslashes($img['title'] ?? '')) ?>')" class="text-yellow-400 hover:text-yellow-300 text-sm" title="Renombrar">✏️</button>
+                                <button onclick="deleteImage('<?= $img['unique_id'] ?>')" class="text-red-400 hover:text-red-300 text-sm" title="Eliminar">🗑️</button>
                             </div>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
                 <?php if (empty($images)): ?>
-                    <p class="text-gray-400 col-span-4">Este álbum está vacío.</p>
+                    <div class="col-span-4 text-center py-16">
+                        <div class="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-4">
+                            <span class="text-3xl">📂</span>
+                        </div>
+                        <p class="text-gray-500 text-sm">Esta carpeta está vacía.</p>
+                    </div>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>
 
     <script>
-        // Funciones individuales
         async function renameImage(id, currentTitle) {
             const newTitle = prompt("Nuevo título para la imagen:", currentTitle);
             if (newTitle === null || newTitle === currentTitle) return;
@@ -292,15 +324,12 @@ if ($authOk) {
             else alert(data.error);
         }
 
-        // Funciones masivas (Bulk)
         function getSelectedIds() {
-            const checkboxes = document.querySelectorAll('.img-checkbox:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
+            return Array.from(document.querySelectorAll('.img-checkbox:checked')).map(cb => cb.value);
         }
 
         function toggleAll(source) {
-            const checkboxes = document.querySelectorAll('.img-checkbox');
-            checkboxes.forEach(cb => cb.checked = source.checked);
+            document.querySelectorAll('.img-checkbox').forEach(cb => cb.checked = source.checked);
             updateBulkUI();
         }
 
@@ -309,7 +338,7 @@ if ($authOk) {
             const bulkBar = document.getElementById('bulkActionsBar');
             const countTxt = document.getElementById('selectedCountTxt');
             const selectAllCb = document.getElementById('selectAllCb');
-            const allCheckboxes = document.querySelectorAll('.img-checkbox');
+            const allCbs = document.querySelectorAll('.img-checkbox');
             
             if (bulkBar) {
                 if (ids.length > 0) {
@@ -318,10 +347,7 @@ if ($authOk) {
                 } else {
                     bulkBar.classList.add('hidden');
                 }
-                
-                if (selectAllCb) {
-                    selectAllCb.checked = (ids.length === allCheckboxes.length && allCheckboxes.length > 0);
-                }
+                if (selectAllCb) selectAllCb.checked = (ids.length === allCbs.length && allCbs.length > 0);
             }
         }
 
@@ -346,10 +372,7 @@ if ($authOk) {
             
             const select = document.getElementById('bulkMoveSelect');
             const targetAlbum = select.value;
-            if (targetAlbum === "") {
-                alert("Selecciona un álbum destino primero");
-                return;
-            }
+            if (targetAlbum === "") { alert("Selecciona una carpeta destino primero"); return; }
             
             const res = await fetch('/api_manage.php', {
                 method: 'POST',

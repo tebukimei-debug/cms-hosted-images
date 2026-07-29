@@ -20,9 +20,15 @@ $data = json_decode(file_get_contents('php://input'), true);
 $action = $data['action'] ?? '';
 $id = $data['id'] ?? '';
 
-if (!$action || !$id) {
+// create_album no requiere id
+if (!$action) {
     http_response_code(400);
-    echo json_encode(['error' => 'Missing action or id']);
+    echo json_encode(['error' => 'Missing action']);
+    exit;
+}
+if ($action !== 'create_album' && !$id) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Missing id']);
     exit;
 }
 
@@ -31,7 +37,22 @@ $userId = getActiveUserId();
 $isAdmin = isAdmin();
 
 try {
-    if ($action === 'delete_image') {
+    if ($action === 'create_album') {
+        $name = trim($data['name'] ?? '');
+        $privacy = $data['privacy'] ?? 'public';
+        $password = $data['password'] ?? '';
+        if (!$name) throw new Exception("Nombre requerido");
+
+        $uniqueId = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
+        $passwordHash = ($privacy === 'password' && !empty($password)) ? password_hash($password, PASSWORD_DEFAULT) : null;
+
+        $stmt = $pdo->prepare("INSERT INTO albums (user_id, unique_id, name, privacy, password_hash) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $uniqueId, $name, $privacy, $passwordHash]);
+        $newId = $pdo->lastInsertId();
+
+        echo json_encode(['success' => true, 'album' => ['id' => $newId, 'name' => $name, 'unique_id' => $uniqueId]]);
+
+    } elseif ($action === 'delete_image') {
         // Verificar propiedad o admin
         $stmt = $pdo->prepare("SELECT filename, user_id FROM images WHERE unique_id = ?");
         $stmt->execute([$id]);

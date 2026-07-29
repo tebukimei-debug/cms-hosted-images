@@ -19,108 +19,204 @@ if (isLoggedIn()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chevereto PHP Clone</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; }
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #0a0e1a; color: #e2e8f0; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(99, 102, 241, 0.15); }
+        .glass-light { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(148, 163, 184, 0.1); }
+        .gradient-text { background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .dropzone-active { border-color: #818cf8 !important; background: rgba(99, 102, 241, 0.08) !important; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25); }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-color: rgba(99, 102, 241, 0.3); }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .progress-bar { background: linear-gradient(90deg, #6366f1, #a78bfa); transition: width 0.4s ease; }
+        .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tag-public { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .tag-private { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .tag-password { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .modal-box { background: #1e293b; border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 16px; padding: 28px; width: 90%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
     </style>
 </head>
-<body class="min-h-screen p-8">
+<body class="min-h-screen">
     
     <!-- Navbar -->
-    <div class="max-w-4xl mx-auto flex justify-end mb-4">
-        <?php if (isLoggedIn()): ?>
-            <a href="/albums.php" class="text-blue-400 mr-6 self-center hover:underline">Mis Álbumes</a>
-            <span class="mr-4 text-gray-300 self-center">Hola, <b class="text-white"><?= htmlspecialchars(getActiveUsername()) ?></b></span>
-            <a href="/logout.php" class="bg-red-500/20 text-red-400 border border-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition">Cerrar Sesión</a>
-        <?php else: ?>
-            <a href="/login.php" class="text-blue-400 mr-4 self-center hover:underline">Iniciar Sesión</a>
-            <a href="/register.php" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition">Registrarse</a>
-        <?php endif; ?>
-    </div>
+    <nav class="glass sticky top-0 z-40 mb-8">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold gradient-text tracking-tight">📷 UGirls</a>
+            <div class="flex items-center gap-4">
+                <?php if (isLoggedIn()): ?>
+                    <a href="/albums.php" class="text-sm text-gray-300 hover:text-indigo-400 transition font-medium">📁 Mis Álbumes</a>
+                    <?php if (isAdmin()): ?>
+                        <a href="/admin.php" class="text-sm text-gray-300 hover:text-red-400 transition font-medium">⚙️ Admin</a>
+                    <?php endif; ?>
+                    <span class="text-sm text-gray-500">|</span>
+                    <span class="text-sm text-gray-400">Hola, <b class="text-white"><?= htmlspecialchars(getActiveUsername()) ?></b></span>
+                    <a href="/logout.php" class="text-xs text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition">Salir</a>
+                <?php else: ?>
+                    <a href="/login.php" class="text-sm text-gray-300 hover:text-white transition">Iniciar Sesión</a>
+                    <a href="/register.php" class="btn-primary text-sm text-white font-semibold px-4 py-2 rounded-lg">Registrarse</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </nav>
 
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Subir Imágenes (PHP Puro)
-        </h1>
+    <div class="max-w-5xl mx-auto px-6 pb-16">
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold gradient-text mb-3">Subir Imágenes</h1>
+            <p class="text-gray-500 text-lg">Arrastra, suelta y comparte al instante</p>
+        </div>
 
-        <!-- Uploader -->
-        <div class="mb-6 flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <div>
-                <label class="text-gray-400 mr-2 text-sm">Subir a:</label>
-                <select id="albumSelect" class="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-white text-sm outline-none">
-                    <option value="">(Sin Álbum / General)</option>
+        <!-- Uploader Controls -->
+        <div class="glass rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 fade-in">
+            <div class="flex items-center gap-3 flex-wrap">
+                <label class="text-sm text-gray-400 font-medium">Subir a:</label>
+                <select id="albumSelect" class="bg-slate-800/80 border border-slate-600/50 rounded-lg px-4 py-2 text-white text-sm">
+                    <option value="">(General)</option>
                     <?php foreach ($albums as $album): ?>
                         <option value="<?= $album['id'] ?>"><?= htmlspecialchars($album['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
-            </div>
-            <div>
-                <?php if (!isLoggedIn()): ?>
-                    <span class="text-xs text-yellow-500">Inicia sesión para crear álbumes.</span>
-                <?php endif; ?>
-                <?php if (isAdmin()): ?>
-                    <a href="/admin.php" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded ml-2 transition">Panel Admin</a>
+                <?php if (isLoggedIn()): ?>
+                    <button onclick="openNewFolderModal()" class="text-indigo-400 hover:text-indigo-300 text-sm font-semibold border border-indigo-500/30 px-3 py-2 rounded-lg hover:bg-indigo-500/10 transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        Nueva Carpeta
+                    </button>
                 <?php endif; ?>
             </div>
+            <?php if (!isLoggedIn()): ?>
+                <span class="text-xs text-yellow-500/80">Inicia sesión para crear carpetas.</span>
+            <?php endif; ?>
         </div>
 
-        <div id="dropzone" class="border-2 border-dashed border-gray-600 rounded-xl p-12 text-center bg-gray-800/50 hover:bg-gray-800 transition cursor-pointer mb-12 relative">
-            <p class="text-xl text-gray-300">Arrastra imágenes aquí o haz clic para subir varias</p>
+        <!-- Dropzone -->
+        <div id="dropzone" class="border-2 border-dashed border-slate-600/50 rounded-2xl p-16 text-center glass-light cursor-pointer mb-10 transition-all duration-300 hover:border-indigo-500/50 fade-in">
+            <div class="flex flex-col items-center gap-4">
+                <div class="w-20 h-20 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                    <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                    <p class="text-lg text-gray-300 font-medium">Arrastra imágenes aquí</p>
+                    <p class="text-sm text-gray-500 mt-1">o haz clic para seleccionar · JPG, PNG, WEBP, GIF</p>
+                </div>
+            </div>
             <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
         </div>
 
-        <div id="progress" class="hidden mb-8 text-center text-blue-400 font-semibold">Procesando y optimizando...</div>
-
-        <!-- Resultados de Subida (Oculto por defecto) -->
-        <div id="uploadResults" class="hidden mb-12 bg-slate-800 border border-slate-700 p-6 rounded-xl">
-            <h2 class="text-2xl font-bold mb-6 text-center text-green-400">¡Subida Exitosa!</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div>
-                    <label class="block text-gray-300 font-semibold mb-2">Forum links (Todos)</label>
-                    <textarea id="allForumLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
+        <!-- Progress -->
+        <div id="progress" class="hidden mb-8 fade-in">
+            <div class="glass rounded-xl p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm font-semibold text-indigo-400" id="progressText">Procesando...</span>
+                    <span class="text-xs text-gray-500" id="progressCount">0/0</span>
                 </div>
-                <div>
-                    <label class="block text-gray-300 font-semibold mb-2">HTML links (Todos)</label>
-                    <textarea id="allHtmlLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
+                <div class="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                    <div id="progressBar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
                 </div>
-                <div>
-                    <label class="block text-gray-300 font-semibold mb-2">HTML code grid (Forzado)</label>
-                    <textarea id="allHtmlGridLinks" class="w-full h-32 bg-slate-900 border border-slate-700 text-gray-300 p-2 rounded text-sm font-mono focus:outline-none focus:border-blue-500" readonly onclick="this.select()"></textarea>
-                </div>
-            </div>
-
-            <div id="individualResults" class="space-y-8"></div>
-            
-            <div class="text-center mt-8">
-                <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">Subir Más / Ver Galería</button>
             </div>
         </div>
 
-        <!-- Galería (Se ocultará al mostrar resultados) -->
-        <div id="galleryContainer">
-            <h2 class="text-2xl font-semibold mb-6">Últimas Imágenes</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="gallery">
+        <!-- Upload Results -->
+        <div id="uploadResults" class="hidden mb-12 fade-in">
+            <div class="glass rounded-2xl p-8">
+                <div class="flex items-center justify-center gap-3 mb-8">
+                    <div class="w-10 h-10 rounded-full bg-green-500/15 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-green-400">¡Subida Exitosa!</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                    <div>
+                        <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase tracking-wider">BBCode (Foro)</label>
+                        <textarea id="allForumLinks" class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase tracking-wider">HTML Links</label>
+                        <textarea id="allHtmlLinks" class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 font-semibold mb-2 text-xs uppercase tracking-wider">HTML Grid (4 Col.)</label>
+                        <textarea id="allHtmlGridLinks" class="w-full h-28 bg-slate-900/60 border border-slate-700/50 text-gray-300 p-3 rounded-xl text-xs font-mono resize-none" readonly onclick="this.select()"></textarea>
+                    </div>
+                </div>
+
+                <div id="individualResults" class="space-y-4"></div>
+                
+                <div class="text-center mt-8">
+                    <button onclick="location.reload()" class="btn-primary text-white font-semibold py-3 px-8 rounded-xl">Subir Más / Ver Galería</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery -->
+        <div id="galleryContainer" class="fade-in">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <span class="gradient-text">Últimas Imágenes</span>
+                <span class="text-xs text-gray-500 font-normal mt-1">(<?= count($images) ?>)</span>
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="gallery">
                 <?php foreach ($images as $img): ?>
-                    <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group">
-                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block">
-                            <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-48 object-cover">
+                    <div class="rounded-xl overflow-hidden border border-slate-700/40 relative group card-hover bg-slate-800/40">
+                        <a href="/view.php?id=<?= $img['unique_id'] ?>" class="block aspect-[4/3] overflow-hidden">
+                            <img src="<?= htmlspecialchars($img['thumb_url'] ?? $img['url']) ?>" alt="Img" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         </a>
                         
                         <?php if ($img['title']): ?>
-                            <div class="absolute bottom-0 w-full bg-black/70 p-2 text-xs truncate text-white">
-                                <?= htmlspecialchars($img['title']) ?>
+                            <div class="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                                <span class="text-xs text-gray-200 font-medium truncate block"><?= htmlspecialchars($img['title']) ?></span>
                             </div>
                         <?php endif; ?>
                         
                         <?php if (isAdmin() || (isLoggedIn() && $img['user_id'] == getActiveUserId())): ?>
-                            <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition bg-black/50 p-1 rounded">
-                                <button onclick="renameImage('<?= $img['unique_id'] ?>', '<?= htmlspecialchars(addslashes($img['title'] ?? '')) ?>')" class="text-yellow-400 hover:text-yellow-300" title="Renombrar">✏️</button>
-                                <button onclick="deleteImage('<?= $img['unique_id'] ?>')" class="text-red-400 hover:text-red-300" title="Eliminar">🗑️</button>
+                            <div class="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm p-1.5 rounded-lg">
+                                <button onclick="renameImage('<?= $img['unique_id'] ?>', '<?= htmlspecialchars(addslashes($img['title'] ?? '')) ?>')" class="text-yellow-400 hover:text-yellow-300 text-sm" title="Renombrar">✏️</button>
+                                <button onclick="deleteImage('<?= $img['unique_id'] ?>')" class="text-red-400 hover:text-red-300 text-sm" title="Eliminar">🗑️</button>
                             </div>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Nueva Carpeta -->
+    <div id="newFolderModal" class="modal-overlay hidden" onclick="if(event.target===this) closeNewFolderModal()">
+        <div class="modal-box fade-in">
+            <h3 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
+                <span class="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-400">📁</span>
+                Crear Nueva Carpeta
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1.5">Nombre</label>
+                    <input type="text" id="newFolderName" class="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-4 py-2.5 text-white text-sm" placeholder="Mi Carpeta">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1.5">Privacidad</label>
+                    <select id="newFolderPrivacy" class="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-4 py-2.5 text-white text-sm" onchange="document.getElementById('newFolderPassField').classList.toggle('hidden', this.value !== 'password')">
+                        <option value="public">Público</option>
+                        <option value="private">Privado (Solo tú)</option>
+                        <option value="password">Con Contraseña</option>
+                    </select>
+                </div>
+                <div id="newFolderPassField" class="hidden">
+                    <label class="block text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1.5">Contraseña</label>
+                    <input type="password" id="newFolderPassword" class="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-4 py-2.5 text-white text-sm" placeholder="••••••">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeNewFolderModal()" class="text-sm text-gray-400 hover:text-white px-4 py-2 rounded-lg transition">Cancelar</button>
+                <button onclick="createFolder()" class="btn-primary text-white text-sm font-semibold px-5 py-2.5 rounded-lg">Crear Carpeta</button>
             </div>
         </div>
     </div>
@@ -136,60 +232,71 @@ if (isLoggedIn()) {
         const individualResults = document.getElementById('individualResults');
 
         dropzone.addEventListener('click', () => fileInput.click());
-
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropzone.classList.add('border-blue-500');
-        });
-
-        dropzone.addEventListener('dragleave', () => {
-            dropzone.classList.remove('border-blue-500');
-        });
-
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dropzone-active'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-active'));
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropzone.classList.remove('border-blue-500');
-            if (e.dataTransfer.files.length) {
-                uploadFiles(e.dataTransfer.files);
-            }
+            dropzone.classList.remove('dropzone-active');
+            if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
         });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) uploadFiles(e.target.files); });
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                uploadFiles(e.target.files);
+        // -- Modal: Nueva Carpeta --
+        function openNewFolderModal() {
+            document.getElementById('newFolderModal').classList.remove('hidden');
+            document.getElementById('newFolderName').value = '';
+            document.getElementById('newFolderName').focus();
+        }
+        function closeNewFolderModal() {
+            document.getElementById('newFolderModal').classList.add('hidden');
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('newFolderName').value.trim();
+            const privacy = document.getElementById('newFolderPrivacy').value;
+            const password = document.getElementById('newFolderPassword')?.value || '';
+            if (!name) { alert('Escribe un nombre para la carpeta'); return; }
+
+            const res = await fetch('/api_manage.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'create_album', name, privacy, password })
+            });
+            const data = await res.json();
+            if (data.success && data.album) {
+                const sel = document.getElementById('albumSelect');
+                const opt = document.createElement('option');
+                opt.value = data.album.id;
+                opt.text = data.album.name;
+                opt.selected = true;
+                sel.appendChild(opt);
+                closeNewFolderModal();
+            } else {
+                alert(data.error || 'Error creando carpeta');
             }
-        });
+        }
 
+        // -- Upload --
         async function uploadFiles(files) {
             progress.classList.remove('hidden');
-            progress.innerText = 'Procesando y optimizando... (0/' + files.length + ')';
+            const progressText = document.getElementById('progressText');
+            const progressCount = document.getElementById('progressCount');
+            const progressBar = document.getElementById('progressBar');
             
             const albumId = document.getElementById('albumSelect')?.value;
             let allResults = [];
             let hasError = false;
-
-            // Procesar en lotes de 20
             const batchSize = 20;
             const totalFiles = files.length;
             
             for (let i = 0; i < totalFiles; i += batchSize) {
                 const chunk = Array.from(files).slice(i, i + batchSize);
                 const formData = new FormData();
-                
-                for (let j = 0; j < chunk.length; j++) {
-                    formData.append('file[]', chunk[j]);
-                }
-                
-                if (albumId) {
-                    formData.append('album_id', albumId);
-                }
+                for (let j = 0; j < chunk.length; j++) formData.append('file[]', chunk[j]);
+                if (albumId) formData.append('album_id', albumId);
 
                 try {
-                    const response = await fetch('/upload.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
+                    const response = await fetch('/upload.php', { method: 'POST', body: formData });
                     const text = await response.text();
                     try {
                         const data = JSON.parse(text);
@@ -201,30 +308,28 @@ if (isLoggedIn()) {
                                 hasError = true;
                             }
                         } else {
-                            alert('Error en un lote: ' + (data.error || 'Desconocido'));
+                            alert('Error en lote: ' + (data.error || 'Desconocido'));
                             hasError = true;
                         }
                     } catch (e) {
-                        console.error("Respuesta cruda del servidor:", text);
-                        alert('Error en el servidor. Revisa la consola o asegúrate de que la imagen no sea demasiado grande.');
+                        console.error("Respuesta cruda:", text);
+                        alert('Error del servidor. Revisa que la imagen no sea demasiado grande.');
                         hasError = true;
                     }
                 } catch (err) {
-                    alert('Error de red al intentar conectar con el servidor en un lote.');
+                    alert('Error de red al conectar con el servidor.');
                     hasError = true;
                 }
                 
                 const currentProgress = Math.min(i + batchSize, totalFiles);
-                progress.innerText = 'Procesando y optimizando... (' + currentProgress + '/' + totalFiles + ')';
+                progressCount.innerText = currentProgress + '/' + totalFiles;
+                progressBar.style.width = (currentProgress / totalFiles * 100) + '%';
+                progressText.innerText = 'Procesando y optimizando...';
             }
             
             progress.classList.add('hidden');
-
-            if (allResults.length > 0) {
-                showResults(allResults);
-            } else if (!hasError) {
-                alert('No se subió ninguna imagen.');
-            }
+            if (allResults.length > 0) showResults(allResults);
+            else if (!hasError) alert('No se subió ninguna imagen.');
         }
 
         function showResults(uploads) {
@@ -240,11 +345,9 @@ if (isLoggedIn()) {
             individualResults.innerHTML = '';
 
             uploads.forEach(u => {
-                const fullUrl = origin + u.url; // Archivo original
-                const thumbUrl = origin + u.thumb_url; // Miniatura
-                const viewUrl = origin + '/view.php?id=' + u.id; // Página del visor
+                const thumbUrl = origin + u.thumb_url;
+                const viewUrl = origin + '/view.php?id=' + u.id;
                 
-                // Los códigos usan la URL de visualización en lugar de la foto directa
                 const forumCode = `[url=${viewUrl}][img]${thumbUrl}[/img][/url]`;
                 const htmlCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
                 const gridCode = `<a href="${viewUrl}"><img src="${thumbUrl}" alt="${u.name}" border="0"></a>`;
@@ -254,26 +357,26 @@ if (isLoggedIn()) {
                 htmlGridAll += gridCode;
 
                 const indDiv = document.createElement('div');
-                indDiv.className = "flex flex-col md:flex-row items-center bg-slate-900 p-4 rounded-lg border border-slate-700 gap-6";
+                indDiv.className = "flex flex-col md:flex-row items-center glass-light p-4 rounded-xl gap-5 fade-in";
                 indDiv.innerHTML = `
                     <div class="flex-shrink-0">
                         <a href="${viewUrl}" target="_blank">
-                            <img src="${thumbUrl}" class="max-w-[150px] max-h-[150px] object-cover rounded shadow">
+                            <img src="${thumbUrl}" class="w-[120px] h-[90px] object-cover rounded-lg shadow-lg">
                         </a>
-                        <p class="text-xs text-gray-400 mt-2 text-center break-all w-[150px]">${u.name}</p>
+                        <p class="text-xs text-gray-500 mt-2 text-center break-all max-w-[120px]">${u.name}</p>
                     </div>
                     <div class="flex-grow w-full space-y-3">
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Show to friend:</label>
-                            <input type="text" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-gray-200" value="${viewUrl}" readonly onclick="this.select()">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Show to friend</label>
+                            <input type="text" class="w-full bg-slate-900/50 border border-slate-700/40 rounded-lg px-3 py-1.5 text-sm text-gray-300" value="${viewUrl}" readonly onclick="this.select()">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Forum thumbnail:</label>
-                            <input type="text" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-gray-200" value="${forumCode.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">BBCode</label>
+                            <input type="text" class="w-full bg-slate-900/50 border border-slate-700/40 rounded-lg px-3 py-1.5 text-sm text-gray-300" value="${forumCode.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">HTML thumbnail:</label>
-                            <input type="text" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-gray-200" value="${htmlCode.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">HTML</label>
+                            <input type="text" class="w-full bg-slate-900/50 border border-slate-700/40 rounded-lg px-3 py-1.5 text-sm text-gray-300" value="${htmlCode.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
                         </div>
                     </div>
                 `;
